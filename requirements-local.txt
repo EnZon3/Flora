@@ -1,0 +1,4 @@
+Pillow>=10.0
+timm==0.9.16
+torch>=2.0
+torchvision>=0.15

@@ -1,0 +1,11 @@
+.env
+node_modules/
+npm-debug.log*
+models/pretrained_models/
+__pycache__/
+*.py[cod]
+.Rhistory
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
