@@ -11,7 +11,7 @@ MODEL_NAME = (
     "vit_base_patch14_reg4_dinov2_lvd142m_pc24_onlyclassifier_then_all"
 )
 ARCHIVE_ROOT = "pretrained_models"
-EXTRACTED_ROOT = Path(__file__).parent / "pretrained_models"
+EXTRACTED_ROOT = Path(__file__).parent / "models" / "pretrained_models"
 CLASS_MAPPING_MEMBER = f"{ARCHIVE_ROOT}/class_mapping.txt"
 CHECKPOINT_MEMBER = f"{ARCHIVE_ROOT}/{MODEL_NAME}/model_best.pth.tar"
 ARGS_MEMBER = f"{ARCHIVE_ROOT}/{MODEL_NAME}/args.yaml"

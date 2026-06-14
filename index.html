@@ -566,10 +566,10 @@
       <section aria-labelledby="backendLabel">
         <span class="section-label" id="backendLabel">Identification engine</span>
         <div class="backend-row">
-          <button class="pill" type="button" data-backend="plantnet" aria-pressed="true">
+          <button class="pill" type="button" data-backend="plantnet" aria-pressed="false">
             Pl@ntNet API
           </button>
-          <button class="pill" type="button" data-backend="local" aria-pressed="false">
+          <button class="pill" type="button" data-backend="local" aria-pressed="true">
             Local model
           </button>
         </div>
@@ -629,8 +629,8 @@
       let selectedFile = null;
       let selectedOrgan = "auto";
       let environmentRequestId = 0;
-      let selectedBackend = localStorage.getItem("flora-backend") || "plantnet";
-      if (!["plantnet", "local"].includes(selectedBackend)) selectedBackend = "plantnet";
+      let selectedBackend = localStorage.getItem("flora-backend") || "local";
+      if (!["plantnet", "local"].includes(selectedBackend)) selectedBackend = "local";
 
       function setPressed(buttons, activeButton) {
         buttons.forEach((button) => {

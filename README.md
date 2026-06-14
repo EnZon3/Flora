@@ -28,7 +28,7 @@ months, and local compatibility.
 
 ```powershell
 git clone <your-repository-url>
-cd mawli_hackathon
+cd flora
 npm install
 Copy-Item .env.example .env
 ```
@@ -51,9 +51,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Optional Local Model
 
-The 1.48 GB model checkpoint is intentionally excluded from Git.
-The inference code in `models/infer.py` is committed; only generated/downloaded
-files under `models/pretrained_models/` are ignored.
+The 1.48 GB model checkpoint is intentionally excluded from Git. The inference
+code in `models/infer.py` is committed; only generated or downloaded files
+under `models/pretrained_models/` are ignored.
 
 1. Download the PlantCLEF archive from the
    [official Zenodo record](https://zenodo.org/records/10848263).
@@ -69,14 +69,21 @@ python -m pip install -r requirements-local.txt
 python models/setup_local_model.py "C:\path\to\PlantNet_PlantCLEF2024_pretrained_models_on_the_flora_of_south-western_europe.tar"
 ```
 
-The setup command reads `PLANTNET_API_KEY` from `.env`, extracts only the
+The setup command reads `PLANTNET_API_KEY` from `.env`, extracts the
 fully fine-tuned checkpoint, and builds the current species-name mapping.
 Restart the Node server afterward. CPU inference can take around 15-20 seconds
 per image.
 
+The frontend defaults to the local backend and falls back to Pl@ntNet when the
+local model is unavailable.
+
 In a GitHub Codespace or another fresh deployment, run the same model setup
 command inside that environment. The checkpoint installed on your own computer
 is not uploaded with the repository.
+
+The model covers roughly 7,806 vascular plant classes from southwestern
+Europe. Coverage elsewhere is limited; use the Pl@ntNet API for global
+identification.
 
 ## API Routes
 
