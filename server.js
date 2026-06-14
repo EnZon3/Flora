@@ -9,9 +9,9 @@ import multer from "multer";
 import fetch from "node-fetch";
 import {
   IdentificationServiceError,
+  getLocalModelStatus,
   identifyWithLocalModel,
   identifyWithPlantNet,
-  isLocalModelConfigured,
 } from "./layer1.js";
 
 dotenv.config();
@@ -482,11 +482,13 @@ app.use(express.json({ limit: "32kb" }));
 app.use(express.static(__dirname));
 
 app.get("/health", (_request, response) => {
+  const localModel = getLocalModelStatus();
   response.json({
     status: "ok",
     plantnetConfigured: Boolean(process.env.PLANTNET_API_KEY),
     trefleConfigured: Boolean(process.env.TREFLE_TOKEN),
-    localModelConfigured: isLocalModelConfigured(),
+    localModelConfigured: localModel.configured,
+    localModelMissing: localModel.missing,
   });
 });
 

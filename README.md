@@ -52,6 +52,8 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Optional Local Model
 
 The 1.48 GB model checkpoint is intentionally excluded from Git.
+The inference code in `models/infer.py` is committed; only generated/downloaded
+files under `models/pretrained_models/` are ignored.
 
 1. Download the PlantCLEF archive from the
    [official Zenodo record](https://zenodo.org/records/10848263).
@@ -71,6 +73,10 @@ The setup command reads `PLANTNET_API_KEY` from `.env`, extracts only the
 fully fine-tuned checkpoint, and builds the current species-name mapping.
 Restart the Node server afterward. CPU inference can take around 15-20 seconds
 per image.
+
+In a GitHub Codespace or another fresh deployment, run the same model setup
+command inside that environment. The checkpoint installed on your own computer
+is not uploaded with the repository.
 
 ## API Routes
 

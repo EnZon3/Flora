@@ -7,6 +7,7 @@ import fetch from "node-fetch";
 
 const CONFIDENCE_THRESHOLD = 0.7;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const localInferenceScript = path.join(__dirname, "models", "infer.py");
 const localModelDirectory = path.join(
   __dirname,
   "models",
@@ -22,12 +23,25 @@ const localSpeciesMapping = path.join(localModelDirectory, "species_id_to_name.j
 
 export class IdentificationServiceError extends Error {}
 
+export function getLocalModelStatus() {
+  const requiredFiles = [
+    ["inference script", localInferenceScript],
+    ["checkpoint", localModelWeights],
+    ["class mapping", localClassMapping],
+    ["species mapping", localSpeciesMapping],
+  ];
+  const missing = requiredFiles
+    .filter(([, filePath]) => !fs.existsSync(filePath))
+    .map(([label]) => label);
+
+  return {
+    configured: missing.length === 0,
+    missing,
+  };
+}
+
 export function isLocalModelConfigured() {
-  return (
-    fs.existsSync(localModelWeights) &&
-    fs.existsSync(localClassMapping) &&
-    fs.existsSync(localSpeciesMapping)
-  );
+  return getLocalModelStatus().configured;
 }
 
 function normalizeCandidate(candidate) {
@@ -294,11 +308,10 @@ export async function identifyWithPlantNet(file, organ) {
 }
 
 function runInference(filePath, organ) {
-  const scriptPath = path.join(__dirname, "models", "infer.py");
   const python = process.env.PYTHON_BIN || (process.platform === "win32" ? "python" : "python3");
 
   return new Promise((resolve, reject) => {
-    const child = spawn(python, [scriptPath, "--image", filePath, "--organ", organ], {
+    const child = spawn(python, [localInferenceScript, "--image", filePath, "--organ", organ], {
       windowsHide: true,
     });
     let stdout = "";
@@ -326,9 +339,11 @@ function runInference(filePath, organ) {
 }
 
 export async function identifyWithLocalModel(file, organ) {
-  if (!isLocalModelConfigured()) {
+  const localModelStatus = getLocalModelStatus();
+  if (!localModelStatus.configured) {
     throw new IdentificationServiceError(
-      "Local model is not installed. Use the Pl@ntNet API backend.",
+      `Local model is unavailable (missing: ${localModelStatus.missing.join(", ")}). ` +
+        "Run the local model setup or use the Pl@ntNet API backend.",
     );
   }
   try {
