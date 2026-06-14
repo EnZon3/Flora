@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10120f" />
+    <title>flora. | Plant identifier</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #10120f;
+        --panel: #151814;
+        --panel-strong: #1a1e18;
+        --text: #eff1e9;
+        --muted: #969d8e;
+        --line: #30362d;
+        --accent: #a7b77a;
+        --accent-dark: #182010;
+        --danger: #d2766c;
+        --warning: #d1a95d;
+        --success: #8eb67d;
+        --radius: 3px;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+          var(--bg);
+        background-size: 32px 32px;
+        color: var(--text);
+        font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button, input { font: inherit; }
+      button { color: inherit; }
+
+      .shell {
+        width: min(720px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0 72px;
+      }
+
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 42px;
+      }
+
+      .wordmark {
+        margin: 0;
+        font: 700 clamp(30px, 6vw, 44px)/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: -.08em;
+      }
+
+      .tagline {
+        margin: 0 0 3px;
+        color: var(--muted);
+        font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+      }
+
+      .section-label {
+        display: block;
+        margin-bottom: 9px;
+        color: var(--muted);
+        font: 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: .11em;
+        text-transform: uppercase;
+      }
+
+      .backend-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+
+      .pill, .organ-button {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: transparent;
+        cursor: pointer;
+        transition: border-color .18s ease, background .18s ease, color .18s ease;
+      }
+
+      .pill {
+        padding: 8px 14px;
+        color: var(--muted);
+      }
+
+      .pill:hover, .organ-button:hover { border-color: var(--accent); color: var(--text); }
+      .pill[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #10120f;
+      }
+      .pill:disabled {
+        border-color: var(--line);
+        background: transparent;
+        color: #555b51;
+        cursor: not-allowed;
+        text-decoration: line-through;
+      }
+
+      .health {
+        display: none;
+        margin: 0 0 18px;
+        padding: 10px 12px;
+        border-left: 2px solid var(--warning);
+        background: #1d1a12;
+        color: #d8c79e;
+        font-size: 13px;
+      }
+
+      .image-zone {
+        position: relative;
+        display: grid;
+        width: 100%;
+        min-height: min(52vh, 430px);
+        place-items: center;
+        overflow: hidden;
+        border: 1px dashed #4a5145;
+        border-radius: var(--radius);
+        background: #121510;
+        cursor: pointer;
+        transition: border-color .18s ease, background .18s ease;
+      }
+
+      .image-zone:hover, .image-zone:focus-within {
+        border-color: var(--accent);
+        background: #141811;
+      }
+
+      .image-zone.has-image { border-style: solid; }
+
+      #imageInput {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #preview {
+        display: none;
+        width: 100%;
+        height: 100%;
+        min-height: min(52vh, 430px);
+        object-fit: contain;
+        background: #090a09;
+      }
+
+      .upload-prompt {
+        display: grid;
+        justify-items: center;
+        gap: 12px;
+        padding: 32px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .camera-mark {
+        display: grid;
+        width: 58px;
+        height: 58px;
+        place-items: center;
+        border: 1px solid var(--accent);
+        border-radius: 50%;
+        color: var(--accent);
+        font: 28px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .upload-prompt strong { color: var(--text); font-weight: 500; }
+      .upload-prompt small { font-size: 12px; }
+
+      .image-zone.loading::after {
+        position: absolute;
+        inset: 0;
+        content: "";
+        background: rgba(12, 14, 11, .58);
+        animation: pulse 1.35s ease-in-out infinite;
+      }
+
+      @keyframes pulse { 50% { background: rgba(35, 43, 29, .52); } }
+
+      .controls {
+        display: grid;
+        gap: 24px;
+        margin-top: 24px;
+      }
+
+      .organ-row {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+
+      .organ-button {
+        padding: 9px 4px;
+        border: 0;
+        border-right: 1px solid var(--line);
+        border-radius: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .organ-button:last-child { border-right: 0; }
+      .organ-button[aria-pressed="true"] {
+        background: var(--panel-strong);
+        color: var(--accent);
+      }
+
+      .identify-button {
+        width: 100%;
+        padding: 13px 18px;
+        border: 1px solid var(--accent);
+        border-radius: var(--radius);
+        background: var(--accent);
+        color: #10120f;
+        cursor: pointer;
+        font-weight: 700;
+        letter-spacing: .01em;
+        transition: background .18s ease, color .18s ease;
+      }
+
+      .identify-button:hover:not(:disabled) { background: #bdca96; }
+      .identify-button:disabled {
+        border-color: var(--line);
+        background: transparent;
+        color: #62685d;
+        cursor: not-allowed;
+      }
+
+      .result {
+        display: none;
+        margin-top: 32px;
+        padding: 26px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+      }
+
+      .result.visible {
+        display: block;
+        animation: reveal .3s ease both;
+      }
+
+      @keyframes reveal {
+        from { opacity: 0; transform: translateY(8px); }
+      }
+
+      .result-top {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .scientific-name {
+        margin: 0;
+        font: italic 500 clamp(25px, 5vw, 34px)/1.2 Georgia, serif;
+      }
+
+      .common-names, .family {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+
+      .family { font-size: 12px; }
+
+      .badge {
+        flex: 0 0 auto;
+        padding: 5px 9px;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font: 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      .badge.edible { color: var(--success); }
+      .badge.not-edible { color: var(--danger); }
+      .badge.unknown { color: var(--muted); }
+
+      .confidence { margin: 24px 0; }
+      .confidence-copy {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .confidence-track { height: 4px; background: #292e27; }
+      .confidence-fill { height: 100%; background: var(--accent); transition: width .6s ease; }
+
+      .facts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1px;
+        margin: 0 0 20px;
+        background: var(--line);
+        border: 1px solid var(--line);
+      }
+
+      .fact { padding: 13px; background: var(--panel); }
+      .fact dt {
+        color: var(--muted);
+        font: 10px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+      .fact dd { margin: 5px 0 0; }
+
+      .safety {
+        margin: 0 0 20px;
+        padding-left: 11px;
+        border-left: 2px solid var(--warning);
+        color: #c9bea4;
+        font-size: 12px;
+      }
+
+      .pfaf-link { color: var(--accent); text-underline-offset: 4px; }
+
+      details {
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+      summary { color: var(--muted); cursor: pointer; }
+      .candidate {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        padding: 11px 0;
+        border-bottom: 1px solid #262b24;
+      }
+      .candidate:last-child { border: 0; }
+      .candidate small { display: block; color: var(--muted); }
+
+      .message-card {
+        border-left: 2px solid var(--warning);
+        background: #1d1a12;
+      }
+      .message-card.error { border-color: var(--danger); background: #211513; }
+      .message-card h2 { margin: 0 0 7px; font-size: 18px; }
+      .message-card p { margin: 0; color: var(--muted); }
+      .retry {
+        margin-top: 16px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .environment-status {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 12px;
+        padding: 9px 11px;
+        border-left: 2px solid var(--accent);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .environment-status.visible { display: flex; }
+      .environment-status.notice { border-color: var(--warning); background: #1d1a12; }
+
+      .dismiss-notice {
+        flex: 0 0 auto;
+        padding: 1px 6px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 18px;
+      }
+
+      .environment-card {
+        display: none;
+        margin-top: 16px;
+        padding: 26px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+      }
+
+      .environment-card.visible {
+        display: block;
+        animation: reveal .3s ease both;
+      }
+
+      .environment-heading {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font: 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: .11em;
+        text-transform: uppercase;
+      }
+
+      .compatibility-panel {
+        padding: 17px;
+        border: 1px solid var(--line);
+        border-left-width: 3px;
+        background: var(--panel-strong);
+      }
+
+      .compatibility-panel.good { border-left-color: var(--success); }
+      .compatibility-panel.fair { border-left-color: var(--warning); }
+      .compatibility-panel.poor { border-left-color: var(--danger); }
+
+      .compatibility-score {
+        margin: 0;
+        font: 600 clamp(23px, 5vw, 31px)/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .compatibility-panel.good .compatibility-score { color: var(--success); }
+      .compatibility-panel.fair .compatibility-score { color: var(--warning); }
+      .compatibility-panel.poor .compatibility-score { color: var(--danger); }
+
+      .compatibility-points {
+        margin: 12px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .compatibility-points li + li { margin-top: 4px; }
+      .compatibility-points .warning-point { color: #c9a59e; }
+
+      .more-points {
+        margin-top: 8px;
+        padding-top: 0;
+        border-top: 0;
+        font-size: 12px;
+      }
+
+      .environment-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1px;
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        background: var(--line);
+      }
+
+      .environment-tile {
+        min-height: 116px;
+        padding: 14px;
+        background: var(--panel);
+      }
+
+      .tile-label {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--muted);
+        font: 10px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .tile-value {
+        display: block;
+        font-size: 19px;
+        line-height: 1.25;
+      }
+
+      .tile-detail {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .aqi-good { color: var(--success); }
+      .aqi-moderate { color: var(--warning); }
+      .aqi-unhealthy { color: var(--danger); }
+      .unavailable { color: #6e746a; }
+
+      .planting-calendar {
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+
+      .month-row {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 4px;
+      }
+
+      .month {
+        padding: 6px 1px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        color: #656b61;
+        font: 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        text-align: center;
+      }
+
+      .month.suitable {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #10120f;
+      }
+
+      .forecast-details { margin-top: 20px; }
+
+      .forecast-table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .forecast-table th, .forecast-table td {
+        padding: 8px 5px;
+        border-bottom: 1px solid #262b24;
+        text-align: left;
+      }
+
+      .forecast-table th {
+        color: var(--muted);
+        font: 10px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        text-transform: uppercase;
+      }
+
+      .footer-note {
+        margin-top: 30px;
+        color: #70766b;
+        font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        text-align: center;
+      }
+
+      @media (max-width: 560px) {
+        .shell { width: min(100% - 22px, 720px); padding-top: 26px; }
+        header { margin-bottom: 30px; }
+        .tagline { display: none; }
+        .image-zone, #preview { min-height: 48vh; }
+        .result, .environment-card { padding: 20px 16px; }
+        .result-top { display: grid; }
+        .badge { justify-self: start; }
+        .environment-grid { grid-template-columns: 1fr; }
+        .month-row { grid-template-columns: repeat(6, 1fr); row-gap: 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <h1 class="wordmark">flora.</h1>
+        <p class="tagline">point. scan. know.</p>
+      </header>
+
+      <section aria-labelledby="backendLabel">
+        <span class="section-label" id="backendLabel">Identification engine</span>
+        <div class="backend-row">
+          <button class="pill" type="button" data-backend="plantnet" aria-pressed="true">
+            Pl@ntNet API
+          </button>
+          <button class="pill" type="button" data-backend="local" aria-pressed="false">
+            Local model
+          </button>
+        </div>
+        <p class="health" id="healthWarning" role="status"></p>
+      </section>
+
+      <label class="image-zone" id="imageZone" for="imageInput">
+        <input
+          id="imageInput"
+          type="file"
+          accept="image/jpeg,image/png"
+          capture="environment"
+        />
+        <img id="preview" alt="Selected plant preview" />
+        <span class="upload-prompt" id="uploadPrompt">
+          <span class="camera-mark" aria-hidden="true">+</span>
+          <span><strong>Take a photo</strong> or choose an image</span>
+          <small>JPEG or PNG · max 10MB</small>
+        </span>
+      </label>
+
+      <section class="controls">
+        <div>
+          <span class="section-label">Visible plant part</span>
+          <div class="organ-row" aria-label="Visible plant part">
+            <button class="organ-button" type="button" data-organ="auto" aria-pressed="true">Auto</button>
+            <button class="organ-button" type="button" data-organ="leaf" aria-pressed="false">Leaf</button>
+            <button class="organ-button" type="button" data-organ="flower" aria-pressed="false">Flower</button>
+            <button class="organ-button" type="button" data-organ="fruit" aria-pressed="false">Fruit</button>
+            <button class="organ-button" type="button" data-organ="bark" aria-pressed="false">Bark</button>
+          </div>
+        </div>
+        <button class="identify-button" id="identifyButton" type="button" disabled>
+          Identify plant
+        </button>
+      </section>
+
+      <section class="result" id="result" aria-live="polite"></section>
+      <div class="environment-status" id="environmentStatus" role="status"></div>
+      <section class="environment-card" id="environmentCard" aria-live="polite"></section>
+      <p class="footer-note">Identification is informational. Never consume a wild plant without expert verification.</p>
+    </main>
+
+    <script>
+      const imageInput = document.querySelector("#imageInput");
+      const imageZone = document.querySelector("#imageZone");
+      const preview = document.querySelector("#preview");
+      const uploadPrompt = document.querySelector("#uploadPrompt");
+      const identifyButton = document.querySelector("#identifyButton");
+      const result = document.querySelector("#result");
+      const environmentStatus = document.querySelector("#environmentStatus");
+      const environmentCard = document.querySelector("#environmentCard");
+      const healthWarning = document.querySelector("#healthWarning");
+      const backendButtons = [...document.querySelectorAll("[data-backend]")];
+      const organButtons = [...document.querySelectorAll("[data-organ]")];
+
+      let selectedFile = null;
+      let selectedOrgan = "auto";
+      let environmentRequestId = 0;
+      let selectedBackend = localStorage.getItem("flora-backend") || "plantnet";
+      if (!["plantnet", "local"].includes(selectedBackend)) selectedBackend = "plantnet";
+
+      function setPressed(buttons, activeButton) {
+        buttons.forEach((button) => {
+          button.setAttribute("aria-pressed", String(button === activeButton));
+        });
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function confidencePercent(value) {
+        return Math.max(0, Math.min(100, Math.round(Number(value || 0) * 100)));
+      }
+
+      setPressed(
+        backendButtons,
+        backendButtons.find((button) => button.dataset.backend === selectedBackend),
+      );
+
+      backendButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.disabled) return;
+          selectedBackend = button.dataset.backend;
+          localStorage.setItem("flora-backend", selectedBackend);
+          setPressed(backendButtons, button);
+        });
+      });
+
+      organButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedOrgan = button.dataset.organ;
+          setPressed(organButtons, button);
+        });
+      });
+
+      imageInput.addEventListener("change", () => {
+        const [file] = imageInput.files;
+        if (!file) return;
+        selectedFile = file;
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+        uploadPrompt.style.display = "none";
+        imageZone.classList.add("has-image");
+        identifyButton.disabled = false;
+        result.classList.remove("visible");
+        clearEnvironment();
+      });
+
+      function clearEnvironment() {
+        environmentRequestId += 1;
+        environmentStatus.className = "environment-status";
+        environmentStatus.replaceChildren();
+        environmentCard.className = "environment-card";
+        environmentCard.replaceChildren();
+      }
+
+      function renderMessage(message, isError = false, retry = true) {
+        result.className = `result visible message-card${isError ? " error" : ""}`;
+        result.innerHTML = `
+          <h2>${isError ? "Identification failed" : "Try another photo"}</h2>
+          <p>${escapeHtml(message)}</p>
+          ${retry ? '<button class="retry" type="button">Choose another image</button>' : ""}
+        `;
+        result.querySelector(".retry")?.addEventListener("click", resetImage);
+      }
+
+      function resetImage() {
+        selectedFile = null;
+        imageInput.value = "";
+        if (preview.src) URL.revokeObjectURL(preview.src);
+        preview.removeAttribute("src");
+        preview.style.display = "none";
+        uploadPrompt.style.display = "grid";
+        imageZone.classList.remove("has-image");
+        identifyButton.disabled = true;
+        result.classList.remove("visible");
+        clearEnvironment();
+        imageInput.click();
+      }
+
+      function weatherIcon(code) {
+        const value = Number(code);
+        if (value === 0) return "☀";
+        if (value >= 1 && value <= 3) return "⛅";
+        if (value >= 45 && value <= 48) return "🌫";
+        if (value >= 51 && value <= 67) return "🌧";
+        if (value >= 71 && value <= 77) return "❄";
+        if (value >= 80 && value <= 82) return "🌦";
+        if (value >= 95 && value <= 99) return "⛈";
+        return "·";
+      }
+
+      function formatValue(value, suffix = "") {
+        return value === null || value === undefined ? "Unavailable" : `${value}${suffix}`;
+      }
+
+      function aqiClass(aqi) {
+        if (aqi === null || aqi === undefined) return "unavailable";
+        if (aqi <= 50) return "aqi-good";
+        if (aqi <= 100) return "aqi-moderate";
+        return "aqi-unhealthy";
+      }
+
+      function compatibilityClass(score) {
+        if (score >= 75) return "good";
+        if (score >= 50) return "fair";
+        return "poor";
+      }
+
+      function renderEnvironment(data) {
+        const compatibility = data.compatibility || { score: 0, label: "Data limited", reasons: [], warnings: [] };
+        const weather = data.weather;
+        const soil = data.soil;
+        const air = data.airQuality;
+        const zone = data.location?.hardinessZone;
+        const forecast = weather?.forecast7day || [];
+        const temperatures = forecast
+          .map((day) => day.maxC)
+          .filter((value) => value !== null && value !== undefined);
+        const highRange = temperatures.length
+          ? `${Math.min(...temperatures)}–${Math.max(...temperatures)}°C`
+          : "Unavailable";
+        const bestMonths = data.seasonal?.bestPlantingMonths;
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const suitableMonths = new Set(bestMonths || []);
+        const points = [
+          ...(compatibility.reasons || []).map((text) => ({ text, warning: false })),
+          ...(compatibility.warnings || []).map((text) => ({ text, warning: true })),
+        ];
+        const visiblePoints = points.slice(0, 3);
+        const hiddenPoints = points.slice(3);
+        const pointsHtml = visiblePoints.length
+          ? `<ul class="compatibility-points">${visiblePoints.map((point) =>
+              `<li class="${point.warning ? "warning-point" : ""}">${escapeHtml(point.text)}</li>`
+            ).join("")}</ul>`
+          : '<p class="tile-detail">Limited plant tolerance data was available for comparison.</p>';
+        const extraPointsHtml = hiddenPoints.length
+          ? `<details class="more-points">
+              <summary>Show more</summary>
+              <ul class="compatibility-points">${hiddenPoints.map((point) =>
+                `<li class="${point.warning ? "warning-point" : ""}">${escapeHtml(point.text)}</li>`
+              ).join("")}</ul>
+            </details>`
+          : "";
+        const forecastRows = forecast.map((day) => {
+          const date = new Date(`${day.date}T12:00:00`);
+          const dayName = date.toLocaleDateString(undefined, { weekday: "short" });
+          return `
+            <tr>
+              <td>${escapeHtml(dayName)}</td>
+              <td title="${escapeHtml(day.conditionLabel)}">${weatherIcon(day.conditionCode)} ${escapeHtml(day.conditionLabel)}</td>
+              <td>${formatValue(day.maxC, "°")} / ${formatValue(day.minC, "°")}</td>
+              <td>${formatValue(day.precipMm, " mm")}</td>
+            </tr>
+          `;
+        }).join("");
+
+        environmentCard.className = "environment-card visible";
+        environmentCard.innerHTML = `
+          <h2 class="environment-heading">Growing conditions near you</h2>
+          <section class="compatibility-panel ${compatibilityClass(compatibility.score)}">
+            <p class="compatibility-score">${escapeHtml(compatibility.score)} — ${escapeHtml(compatibility.label)}</p>
+            ${pointsHtml}
+            ${extraPointsHtml}
+          </section>
+          <div class="environment-grid">
+            <article class="environment-tile">
+              <span class="tile-label">🌡 Weather</span>
+              <span class="tile-value ${weather ? "" : "unavailable"}">${weatherIcon(weather?.current?.conditionCode)} ${formatValue(weather?.current?.tempC, "°C")}</span>
+              <span class="tile-detail">${escapeHtml(weather?.current?.conditionLabel || "Weather data unavailable")} · 7-day highs ${highRange}</span>
+            </article>
+            <article class="environment-tile">
+              <span class="tile-label">🌱 Soil</span>
+              <span class="tile-value ${soil ? "" : "unavailable"}">${soil ? `pH ${escapeHtml(soil.ph ?? "—")}` : "Soil data unavailable"}</span>
+              <span class="tile-detail">${soil ? `${escapeHtml(soil.phLabel)} · ${escapeHtml(soil.textureClass || "Unknown texture")} · ${escapeHtml(soil.wrbClass || "Unknown WRB")}` : "This source may be temporarily slow."}</span>
+            </article>
+            <article class="environment-tile">
+              <span class="tile-label">💨 Air quality</span>
+              <span class="tile-value ${aqiClass(air?.usAqi)}">${air ? `AQI ${escapeHtml(air.usAqi ?? "—")}` : "AQI unavailable"}</span>
+              <span class="tile-detail">${escapeHtml(air?.label || "Air quality data unavailable")}</span>
+            </article>
+            <article class="environment-tile">
+              <span class="tile-label">🗺 Zone</span>
+              <span class="tile-value ${zone ? "" : "unavailable"}">${zone ? `Zone ${escapeHtml(zone)}` : "Zone unavailable"}</span>
+              <span class="tile-detail">Best months: ${bestMonths === null || bestMonths === undefined ? "plant tolerance unavailable" : bestMonths.length ? escapeHtml(bestMonths.join(", ")) : "none identified"}</span>
+            </article>
+          </div>
+          ${bestMonths === null || bestMonths === undefined ? "" : `
+            <section class="planting-calendar">
+              <span class="section-label">Best planting months</span>
+              <div class="month-row">
+                ${monthNames.map((month) => `<span class="month ${suitableMonths.has(month) ? "suitable" : ""}">${month}</span>`).join("")}
+              </div>
+            </section>
+          `}
+          ${forecastRows ? `
+            <details class="forecast-details">
+              <summary>Show 7-day forecast</summary>
+              <table class="forecast-table">
+                <thead><tr><th>Day</th><th>Conditions</th><th>High / low</th><th>Rain</th></tr></thead>
+                <tbody>${forecastRows}</tbody>
+              </table>
+            </details>
+          ` : ""}
+        `;
+      }
+
+      function showLocationNotice() {
+        environmentStatus.className = "environment-status visible notice";
+        environmentStatus.innerHTML = `
+          <span>Location access is needed for environmental data. Enable it in browser settings.</span>
+          <button class="dismiss-notice" type="button" aria-label="Dismiss location notice">×</button>
+        `;
+        environmentStatus.querySelector(".dismiss-notice").addEventListener("click", () => {
+          environmentStatus.className = "environment-status";
+          environmentStatus.replaceChildren();
+        });
+      }
+
+      function requestEnvironmentalContext(growthConditions) {
+        const requestId = ++environmentRequestId;
+        environmentCard.className = "environment-card";
+        environmentStatus.className = "environment-status visible";
+        environmentStatus.textContent = "📍 Getting local environmental data...";
+
+        if (!navigator.geolocation) {
+          showLocationNotice();
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          async ({ coords }) => {
+            if (requestId !== environmentRequestId) return;
+            try {
+              const response = await fetch("/environment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  lat: coords.latitude,
+                  lon: coords.longitude,
+                  plantGrowthConditions: growthConditions || null,
+                }),
+              });
+              if (!response.ok) throw new Error(`Environment request returned ${response.status}`);
+              const data = await response.json();
+              if (requestId !== environmentRequestId) return;
+              environmentStatus.className = "environment-status";
+              environmentStatus.replaceChildren();
+              renderEnvironment(data);
+            } catch (error) {
+              console.warn("Environmental context unavailable:", error);
+              if (requestId === environmentRequestId) {
+                environmentStatus.className = "environment-status";
+                environmentStatus.replaceChildren();
+                environmentCard.className = "environment-card";
+              }
+            }
+          },
+          (error) => {
+            console.warn("Location unavailable:", error.message);
+            if (requestId === environmentRequestId) showLocationNotice();
+          },
+          { timeout: 8000 },
+        );
+      }
+
+      function renderIdentification(data) {
+        const plant = data.identification;
+        const edibility = data.edibility || {};
+        const confidence = confidencePercent(plant.confidence);
+        const edibleState =
+          edibility.isEdible === true
+            ? { label: "Edible", className: "edible" }
+            : edibility.isEdible === false
+              ? { label: "Not edible", className: "not-edible" }
+              : { label: "Unknown", className: "unknown" };
+        const parts = edibility.edibleParts?.length
+          ? edibility.edibleParts.join(", ")
+          : "Not documented";
+        const names = plant.commonNames?.length
+          ? plant.commonNames.join(" · ")
+          : "No common name listed";
+        const candidates = (plant.allCandidates || [])
+          .map(
+            (candidate) => `
+              <div class="candidate">
+                <span>
+                  ${escapeHtml(candidate.scientificName)}
+                  <small>${escapeHtml(candidate.commonNames?.join(", ") || "No common names")}</small>
+                </span>
+                <span>${confidencePercent(candidate.confidence)}%</span>
+              </div>
+            `,
+          )
+          .join("");
+
+        result.className = "result visible";
+        result.innerHTML = `
+          <div class="result-top">
+            <div>
+              <h2 class="scientific-name">${escapeHtml(plant.scientificName)}</h2>
+              <p class="common-names">${escapeHtml(names)}</p>
+              <p class="family">${escapeHtml(plant.family)}</p>
+            </div>
+            <span class="badge ${edibleState.className}">${edibleState.label}</span>
+          </div>
+          <div class="confidence">
+            <div class="confidence-copy"><span>Confidence</span><span>${confidence}%</span></div>
+            <div class="confidence-track"><div class="confidence-fill" style="width:${confidence}%"></div></div>
+          </div>
+          <dl class="facts">
+            <div class="fact"><dt>Edible parts</dt><dd>${escapeHtml(parts)}</dd></div>
+            <div class="fact"><dt>Toxicity</dt><dd>${escapeHtml(edibility.toxicity || "unknown")}</dd></div>
+          </dl>
+          <p class="safety">Verify before consuming. ${escapeHtml(edibility.safetyNote || "")}</p>
+          <a class="pfaf-link" href="${escapeHtml(data.references?.pfafUrl)}" target="_blank" rel="noopener">
+            View cultivation guide →
+          </a>
+          <details>
+            <summary>Top candidates</summary>
+            ${candidates}
+          </details>
+        `;
+      }
+
+      identifyButton.addEventListener("click", async () => {
+        if (!selectedFile) return;
+        const form = new FormData();
+        form.append("image", selectedFile);
+        form.append("organ", selectedOrgan);
+
+        identifyButton.disabled = true;
+        identifyButton.textContent = "Identifying…";
+        imageZone.classList.add("loading");
+        result.classList.remove("visible");
+
+        try {
+          const response = await fetch(`/identify/${selectedBackend}`, {
+            method: "POST",
+            body: form,
+          });
+          const data = await response.json().catch(() => ({
+            status: "error",
+            message: "The server returned an unreadable response.",
+          }));
+
+          if (!response.ok || data.status === "error") {
+            throw new Error(data.message || "Identification service unavailable.");
+          }
+          if (data.status === "no_plant") {
+            renderMessage(data.message || "No plant detected in this image.");
+          } else if (data.status === "low_confidence") {
+            renderMessage(
+              data.message ||
+                "Couldn't identify with enough certainty. Try a clearer photo of the leaf, flower, or fruit.",
+            );
+          } else {
+            renderIdentification(data);
+            requestEnvironmentalContext(data.growthConditions);
+          }
+        } catch (error) {
+          renderMessage(error.message, true, false);
+        } finally {
+          imageZone.classList.remove("loading");
+          identifyButton.disabled = false;
+          identifyButton.textContent = "Identify plant";
+        }
+      });
+
+      fetch("/health")
+        .then((response) => response.json())
+        .then((health) => {
+          const warnings = [];
+          if (!health.plantnetConfigured) warnings.push("Pl@ntNet API key is missing.");
+          if (!health.trefleConfigured) warnings.push("Trefle token is missing; edibility data will be limited.");
+          const localButton = backendButtons.find((button) => button.dataset.backend === "local");
+          if (!health.localModelConfigured && localButton) {
+            localButton.disabled = true;
+            localButton.title = "PlantCLEF model not installed";
+            localButton.textContent = "Local model unavailable";
+            if (selectedBackend === "local") {
+              selectedBackend = "plantnet";
+              localStorage.setItem("flora-backend", selectedBackend);
+              setPressed(
+                backendButtons,
+                backendButtons.find((button) => button.dataset.backend === selectedBackend),
+              );
+            }
+          }
+          if (warnings.length) {
+            healthWarning.textContent = warnings.join(" ");
+            healthWarning.style.display = "block";
+          }
+        })
+        .catch(() => {
+          healthWarning.textContent = "The identification server is not responding.";
+          healthWarning.style.display = "block";
+        });
+    </script>
+  </body>
+</html>
