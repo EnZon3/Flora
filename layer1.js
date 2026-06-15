@@ -20,6 +20,7 @@ const localModelWeights = path.join(
 );
 const localClassMapping = path.join(localModelDirectory, "class_mapping.txt");
 const localSpeciesMapping = path.join(localModelDirectory, "species_id_to_name.json");
+const plantNetProjects = ["k-southwestern-europe", "k-world-flora"];
 
 export class IdentificationServiceError extends Error {}
 
@@ -117,6 +118,75 @@ function nativeRegions(species) {
     .filter((region) => typeof region === "string");
 }
 
+function normalizeEdibilityFromSpecies(species) {
+  const edibleParts = normalizeEdibleParts(species.edible_part ?? species.edible_parts);
+  const edibleFlag = species.edible;
+  const toxicity = species.toxicity ?? species.toxicity_description ?? "unknown";
+
+  return {
+    isEdible:
+      edibleFlag === true || edibleParts.length > 0
+        ? true
+        : edibleFlag === false
+          ? false
+          : "unknown",
+    edibleParts,
+    toxicity,
+    safetyNote: "Always verify with a local expert before consuming any wild plant.",
+  };
+}
+
+function hasEdibilitySignal(edibility) {
+  if (!edibility) return false;
+  const toxicity = String(edibility.toxicity ?? "unknown").trim().toLowerCase();
+  return (
+    edibility.isEdible !== "unknown" ||
+    (Array.isArray(edibility.edibleParts) && edibility.edibleParts.length > 0) ||
+    toxicity !== "unknown"
+  );
+}
+
+async function lookupPlantNetEdibility(scientificName) {
+  const apiKey = process.env.PLANTNET_API_KEY;
+  if (!apiKey) return null;
+
+  for (const project of plantNetProjects) {
+    let page = 1;
+    while (page <= 5) {
+      const url = new URL(`https://my-api.plantnet.org/v2/projects/${project}/species`);
+      url.searchParams.set("api-key", apiKey);
+      url.searchParams.set("pageSize", "10000");
+      url.searchParams.set("page", String(page));
+      url.searchParams.set("lang", "en");
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`PlantNet species lookup returned ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const speciesList = Array.isArray(payload) ? payload : payload.data ?? [];
+      const match = speciesList.find(
+        (species) =>
+          species.scientificNameWithoutAuthor === scientificName ||
+          species.scientificName === scientificName,
+      );
+      if (match) {
+        const edibility = normalizeEdibilityFromSpecies(match);
+        if (hasEdibilitySignal(edibility)) {
+          return edibility;
+        }
+        return null;
+      }
+
+      if (speciesList.length < 10000) break;
+      page += 1;
+    }
+  }
+
+  return null;
+}
+
 async function lookupTrefle(scientificName) {
   const token = process.env.TREFLE_TOKEN;
   if (!token) return null;
@@ -145,17 +215,19 @@ async function lookupTrefle(scientificName) {
   const edibleParts = normalizeEdibleParts(species.edible_part ?? species.edible_parts);
   const explicitlyEdible = species.edible === true;
   const explicitlyNotEdible = species.edible === false;
+  const toxicity = species.toxicity ?? "unknown";
+  const hasToxicityData = String(toxicity).trim().toLowerCase() !== "unknown";
 
   return {
     trefleId: match.id,
     edibility: {
       isEdible: explicitlyEdible || edibleParts.length > 0
         ? true
-        : explicitlyNotEdible
+        : explicitlyNotEdible && hasToxicityData
           ? false
           : "unknown",
       edibleParts,
-      toxicity: species.toxicity ?? "unknown",
+      toxicity,
       safetyNote: "Always verify with a local expert before consuming any wild plant.",
     },
     growthConditions: {
@@ -183,8 +255,20 @@ async function enrichCandidate(candidate) {
     console.warn("Trefle enrichment failed:", error.message);
   }
 
+  let edibility = enrichment?.edibility ?? unknownEdibility();
+  if (!hasEdibilitySignal(edibility)) {
+    try {
+      const plantNetEdibility = await lookupPlantNetEdibility(candidate.scientificName);
+      if (plantNetEdibility) {
+        edibility = plantNetEdibility;
+      }
+    } catch (error) {
+      console.warn("PlantNet edibility lookup failed:", error.message);
+    }
+  }
+
   return {
-    edibility: enrichment?.edibility ?? unknownEdibility(),
+    edibility,
     growthConditions: enrichment?.growthConditions ?? null,
     references: {
       pfafUrl: pfafUrl(candidate.scientificName),
